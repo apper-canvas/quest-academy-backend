@@ -99,6 +99,7 @@ const navItems = [
 {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-white/20 shadow-lg z-40">
         <div className="grid grid-cols-6">
+          {navItems.map((item) => {
             const isActive = location.pathname === item.path
             return (
               <Link
