@@ -1,9 +1,11 @@
-import { mathLevels, mathProblems } from '@/services/mockData/mathData'
+import React from "react";
+import { mathLevels, mathProblems } from "@/services/mockData/mathData";
+import Error from "@/components/ui/Error";
 
 export const getMathLevels = async () => {
   // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 300))
-  return [...mathLevels]
+  await new Promise(resolve => setTimeout(resolve, 300));
+  return [...mathLevels];
 }
 
 export const getMathProblems = async (difficulty) => {
@@ -24,10 +26,32 @@ export const submitMathAnswer = async (problemId, answer) => {
   const problem = mathProblems.find(p => p.id === problemId)
   if (!problem) throw new Error('Problem not found')
   
-  const isCorrect = answer === problem.correctAnswer
+const isCorrect = answer === problem.correctAnswer
   return {
     correct: isCorrect,
     points: isCorrect ? problem.points : 0,
     correctAnswer: problem.correctAnswer
   }
+}
+
+// Mini-Game Integration
+export const getMathGames = async (difficulty) => {
+  const { getMathGames: getGames } = await import('./gameService')
+  return getGames(difficulty)
+}
+
+export const startMathGame = async (gameId) => {
+  const { getGameById, getGameQuestions } = await import('./gameService')
+  const game = await getGameById(gameId)
+  const questions = await getGameQuestions(game.type, game.difficulty)
+  
+  return {
+    game: { ...game },
+    questions: [...questions]
+  }
+}
+
+export const submitGameAnswer = async (questionId, answer, gameType) => {
+  const { submitGameAnswer: submitAnswer } = await import('./gameService')
+  return submitAnswer(questionId, answer, gameType)
 }
