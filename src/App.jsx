@@ -9,7 +9,7 @@ import ProgressPage from '@/components/pages/ProgressPage'
 import LeaderboardPage from '@/components/pages/LeaderboardPage'
 import ActivityPage from '@/components/pages/ActivityPage'
 import ParentDashboard from '@/components/pages/ParentDashboard'
-
+import ProfilePage from '@/components/pages/ProfilePage'
 function App() {
   return (
     <Router>
@@ -20,9 +20,10 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/math" element={<MathWorldPage />} />
             <Route path="/reading" element={<ReadingKingdomPage />} />
-            <Route path="/character" element={<CharacterPage />} />
+<Route path="/character" element={<CharacterPage />} />
             <Route path="/progress" element={<ProgressPage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route path="/parent-dashboard" element={<ParentDashboard />} />
             <Route path="/activity/:subject/:difficulty" element={<ActivityPage />} />
           </Routes>

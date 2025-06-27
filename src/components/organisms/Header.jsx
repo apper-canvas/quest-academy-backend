@@ -19,9 +19,9 @@ const navItems = [
     { name: 'Reading Kingdom', path: '/reading', icon: 'BookOpen' },
     { name: 'My Character', path: '/character', icon: 'User' },
     { name: 'Progress', path: '/progress', icon: 'TrendingUp' },
+    { name: 'Profile', path: '/profile', icon: 'Settings' },
     { name: 'Parent Dashboard', path: '/parent-dashboard', icon: 'BarChart3' }
   ]
-  
   return (
     <>
       {/* Desktop Header */}
@@ -96,9 +96,9 @@ const navItems = [
       </header>
       
       {/* Mobile Bottom Navigation */}
+{/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-white/20 shadow-lg z-40">
-        <div className="grid grid-cols-5">
-          {navItems.map((item) => {
+        <div className="grid grid-cols-6">
             const isActive = location.pathname === item.path
             return (
               <Link
