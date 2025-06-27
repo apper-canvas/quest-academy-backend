@@ -1,5 +1,4 @@
 import { readingLevels, readingProblems } from "@/services/mockData/readingData";
-import { submitChallenge } from "@/services/api/mathService";
 import { getGameById, getGameQuestions, getReadingGames, submitGameAnswer } from "@/services/api/gameService";
 import { getChallengeTypes, submitChallengeResult } from "@/services/api/leaderboardService";
 export const getReadingLevels = async () => {
@@ -66,14 +65,13 @@ export const submitReadingAnswer = async (problemId, answer, timingData = null) 
   }
 }
 
-export const submitChallenge = async (challengeData) => {
+export const submitReadingChallenge = async (challengeData) => {
   const { submitChallengeResult } = await import('./leaderboardService')
   return submitChallengeResult({
     ...challengeData,
     subject: 'reading'
   })
 }
-
 // Mini-Game Integration
 export const getReadingGames = async (difficulty) => {
   const { getReadingGames: getGames } = await import('./gameService')
