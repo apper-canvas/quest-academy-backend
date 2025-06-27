@@ -13,12 +13,13 @@ const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { progress } = useUserProgress()
   
-  const navItems = [
+const navItems = [
     { name: 'Home', path: '/', icon: 'Home' },
     { name: 'Math World', path: '/math', icon: 'Calculator' },
     { name: 'Reading Kingdom', path: '/reading', icon: 'BookOpen' },
     { name: 'My Character', path: '/character', icon: 'User' },
-    { name: 'Progress', path: '/progress', icon: 'TrendingUp' }
+    { name: 'Progress', path: '/progress', icon: 'TrendingUp' },
+    { name: 'Parent Dashboard', path: '/parent-dashboard', icon: 'BarChart3' }
   ]
   
   return (

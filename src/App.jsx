@@ -7,6 +7,7 @@ import ReadingKingdomPage from '@/components/pages/ReadingKingdomPage'
 import CharacterPage from '@/components/pages/CharacterPage'
 import ProgressPage from '@/components/pages/ProgressPage'
 import ActivityPage from '@/components/pages/ActivityPage'
+import ParentDashboard from '@/components/pages/ParentDashboard'
 
 function App() {
   return (
@@ -14,12 +15,13 @@ function App() {
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 bg-cloud-pattern">
         <Header />
         <main className="pb-20 md:pb-8">
-          <Routes>
+<Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/math" element={<MathWorldPage />} />
             <Route path="/reading" element={<ReadingKingdomPage />} />
             <Route path="/character" element={<CharacterPage />} />
             <Route path="/progress" element={<ProgressPage />} />
+            <Route path="/parent-dashboard" element={<ParentDashboard />} />
             <Route path="/activity/:subject/:difficulty" element={<ActivityPage />} />
           </Routes>
         </main>
