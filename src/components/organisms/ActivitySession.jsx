@@ -567,11 +567,12 @@ return (
           )}
         </motion.div>
       ) : (
-        <ProblemCard
+<ProblemCard
           problem={currentProblem}
           selectedAnswer={selectedAnswer}
           onAnswerSelect={handleAnswerSelect}
           showResult={showResult}
+          enhanced={challengeMode}
           className="mb-8"
         />
       )}

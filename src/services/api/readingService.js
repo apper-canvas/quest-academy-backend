@@ -1,4 +1,9 @@
+import React from "react";
 import { readingLevels, readingProblems } from "@/services/mockData/readingData";
+import { getChallenges, submitChallenge, submitGameAnswer } from "@/services/api/mathService";
+import { getGameById, getGameQuestions, getReadingGames, submitGameAnswer } from "@/services/api/gameService";
+import { getChallengeTypes, submitChallengeResult } from "@/services/api/leaderboardService";
+import Error from "@/components/ui/Error";
 
 export const getReadingLevels = async () => {
   // Simulate API delay
@@ -92,4 +97,62 @@ export const startReadingGame = async (gameId) => {
 export const submitGameAnswer = async (questionId, answer, gameType) => {
   const { submitGameAnswer: submitAnswer } = await import('./gameService')
   return submitAnswer(questionId, answer, gameType)
+}
+
+// Voice Narration Settings
+export const getVoiceSettings = async () => {
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 100))
+  
+  const savedSettings = localStorage.getItem('questAcademy_voiceSettings')
+  const defaultSettings = {
+    enabled: true,
+    rate: 1.0, // 0.5 to 2.0
+    pitch: 1.0, // 0 to 2
+    volume: 0.8, // 0 to 1
+    voice: null, // Will use system default
+    autoPlay: false // Auto-play stories when loaded
+  }
+  
+  return savedSettings ? { ...defaultSettings, ...JSON.parse(savedSettings) } : defaultSettings
+}
+
+export const updateVoiceSettings = async (settings) => {
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 100))
+  
+  localStorage.setItem('questAcademy_voiceSettings', JSON.stringify(settings))
+  return { ...settings }
+}
+
+export const getAvailableVoices = async () => {
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 50))
+  
+  // Check if speechSynthesis is available (browser environment)
+  if (typeof window === 'undefined' || !window.speechSynthesis) {
+    return []
+  }
+  
+  return new Promise((resolve) => {
+    const getVoices = () => {
+      const voices = window.speechSynthesis.getVoices()
+      if (voices.length > 0) {
+        // Filter to get good quality voices, prefer English
+        const filteredVoices = voices.filter(voice => 
+          voice.lang.startsWith('en') || voice.default
+        )
+        resolve(filteredVoices.length > 0 ? filteredVoices : voices)
+      } else {
+        // Voices not loaded yet, try again
+        setTimeout(getVoices, 100)
+      }
+    }
+    
+    // Load voices if not already loaded
+    if (window.speechSynthesis.getVoices().length === 0) {
+      window.speechSynthesis.addEventListener('voiceschanged', getVoices)
+    }
+    getVoices()
+  })
 }
