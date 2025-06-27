@@ -1,8 +1,7 @@
 import { readingLevels, readingProblems } from "@/services/mockData/readingData";
-import { getChallenges, submitChallenge } from "@/services/api/mathService";
+import { submitChallenge } from "@/services/api/mathService";
 import { getGameById, getGameQuestions, getReadingGames, submitGameAnswer } from "@/services/api/gameService";
 import { getChallengeTypes, submitChallengeResult } from "@/services/api/leaderboardService";
-
 export const getReadingLevels = async () => {
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 300))
