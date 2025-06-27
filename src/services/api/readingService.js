@@ -88,12 +88,6 @@ export const startReadingGame = async (gameId) => {
     questions: [...questions]
   }
 }
-
-export const submitGameAnswer = async (questionId, answer, gameType) => {
-  const { submitGameAnswer: submitAnswer } = await import('./gameService')
-  return submitAnswer(questionId, answer, gameType)
-}
-
 // Voice Narration Settings
 export const getVoiceSettings = async () => {
   // Simulate API delay
