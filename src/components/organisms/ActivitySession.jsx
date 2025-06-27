@@ -22,25 +22,40 @@ const ActivitySession = ({ problems, subject, difficulty, isGame = false, gameDa
   const [isCorrect, setIsCorrect] = useState(false)
   const [avatarEmotion, setAvatarEmotion] = useState('happy')
   
-  // Game-specific state
+// Game-specific state
   const [timeRemaining, setTimeRemaining] = useState(null)
   const [gameStarted, setGameStarted] = useState(false)
   const [correctAnswers, setCorrectAnswers] = useState(0)
   const [gameComplete, setGameComplete] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
+  
+  // Challenge-specific state
+  const [challengeMode, setChallengeMode] = useState(false)
+  const [challengeStartTime, setChallengeStartTime] = useState(null)
+  const [challengeEndTime, setChallengeEndTime] = useState(null)
+  const [questionStartTime, setQuestionStartTime] = useState(null)
+  const [responseTimes, setResponseTimes] = useState([])
 const currentProblem = problems[currentIndex]
   const isLastProblem = currentIndex === problems.length - 1
   const progress = isGame && gameData?.timeLimit 
     ? ((gameData.timeLimit - (timeRemaining || 0)) / gameData.timeLimit) * 100
     : ((currentIndex + 1) / problems.length) * 100
   
-  // Game timer effect
+// Initialize challenge mode
   useEffect(() => {
-    if (isGame && gameData?.timeLimit && gameStarted && timeRemaining > 0 && !gameComplete) {
+    if (gameData?.challengeType) {
+      setChallengeMode(true)
+    }
+  }, [gameData])
+  
+  // Game timer effect (enhanced for challenges)
+  useEffect(() => {
+    if ((isGame || challengeMode) && gameData?.timeLimit && gameStarted && timeRemaining > 0 && !gameComplete) {
       const timer = setInterval(() => {
         setTimeRemaining(prev => {
           if (prev <= 1) {
             setGameComplete(true)
+            setChallengeEndTime(new Date())
             return 0
           }
           return prev - 1
@@ -49,21 +64,32 @@ const currentProblem = problems[currentIndex]
       
       return () => clearInterval(timer)
     }
-  }, [isGame, gameData, gameStarted, timeRemaining, gameComplete])
+  }, [isGame, challengeMode, gameData, gameStarted, timeRemaining, gameComplete])
   
-  // Initialize game timer
+  // Initialize game/challenge timer
   useEffect(() => {
-    if (isGame && gameData?.timeLimit && !gameStarted) {
+    if ((isGame || challengeMode) && gameData?.timeLimit && !gameStarted) {
       setTimeRemaining(gameData.timeLimit)
     }
-  }, [isGame, gameData])
+  }, [isGame, challengeMode, gameData])
   
-  // Handle game completion
+  // Handle game/challenge completion
   useEffect(() => {
-    if (gameComplete && isGame) {
-      handleGameComplete()
+    if (gameComplete && (isGame || challengeMode)) {
+      if (challengeMode) {
+        handleChallengeComplete()
+      } else {
+        handleGameComplete()
+      }
     }
-  }, [gameComplete])
+  }, [gameComplete, isGame, challengeMode])
+  
+  // Start question timing for challenges
+  useEffect(() => {
+    if (challengeMode && !showResult) {
+      setQuestionStartTime(new Date())
+    }
+  }, [currentIndex, challengeMode, showResult])
   const handleAnswerSelect = (answer) => {
     setSelectedAnswer(answer)
   }
@@ -71,22 +97,49 @@ const currentProblem = problems[currentIndex]
 const handleSubmitAnswer = () => {
     if (!selectedAnswer) return
     
-    // Start game timer on first answer for games
-    if (isGame && !gameStarted) {
+    // Calculate response time for challenges
+    const responseTime = challengeMode && questionStartTime 
+      ? (new Date() - questionStartTime) / 1000 
+      : 0
+    
+    // Start game/challenge timer on first answer
+    if ((isGame || challengeMode) && !gameStarted) {
       setGameStarted(true)
+      if (challengeMode) {
+        setChallengeStartTime(new Date())
+      }
     }
     
     const correct = selectedAnswer === currentProblem.correctAnswer
     setIsCorrect(correct)
     setShowResult(true)
     
+    // Track response times for challenges
+    if (challengeMode) {
+      setResponseTimes(prev => [...prev, responseTime])
+    }
+    
     if (correct) {
       setCorrectAnswers(prev => prev + 1)
-      const points = currentProblem.points
+      let points = currentProblem.points
+      
+      // Apply challenge bonuses
+      if (challengeMode) {
+        const speedBonusThreshold = subject === 'math' ? 10 : 15
+        if (responseTime < speedBonusThreshold) {
+          points = Math.floor(points * (subject === 'math' ? 1.5 : 1.3))
+        }
+      }
+      
       setSessionScore(prev => prev + points)
       setAvatarEmotion('excited')
       setCurrentReward({ points, badge: sessionScore === 0 ? 'First Success!' : null })
-      toast.success(`Correct! +${points} points`, {
+      
+      const message = challengeMode && responseTime < (subject === 'math' ? 10 : 15)
+        ? `Lightning fast! +${points} points (Speed Bonus!)`
+        : `Correct! +${points} points`
+      
+      toast.success(message, {
         position: "top-center",
         autoClose: 2000
       })
@@ -107,6 +160,73 @@ const handleSubmitAnswer = () => {
     }, 1000)
 }
   
+const handleChallengeComplete = async () => {
+    const finalScore = sessionScore
+    const totalQuestions = problems.length
+    const timeUsed = challengeStartTime ? Math.floor((new Date() - challengeStartTime) / 1000) : 0
+    const avgResponseTime = responseTimes.length > 0 
+      ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length 
+      : 0
+
+    // Submit challenge result to leaderboard
+    try {
+      const challengeSubmission = {
+        userId: 'current_user',
+        userName: 'Player',
+        challengeType: gameData?.challengeType || gameData?.type,
+        skillLevel: parseInt(difficulty),
+        score: finalScore,
+        correctAnswers,
+        totalQuestions,
+        timeUsed,
+        avgResponseTime
+      }
+
+      // Import and call appropriate service
+      if (subject === 'math') {
+        const { submitChallenge } = await import('@/services/api/mathService')
+        await submitChallenge(challengeSubmission)
+      } else {
+        const { submitChallenge } = await import('@/services/api/readingService')
+        await submitChallenge(challengeSubmission)
+      }
+
+      setShowConfetti(true)
+      setTimeout(() => setShowConfetti(false), 5000)
+
+      updateProgress({
+        subject,
+        difficulty,
+        points: finalScore,
+        completed: true,
+        isChallenge: true,
+        challengeType: gameData?.challengeType || gameData?.type,
+        correctAnswers,
+        totalQuestions,
+        timeUsed,
+        avgResponseTime
+      })
+
+      toast.success(
+        `🏆 Challenge Complete! Score: ${finalScore} points. Check the leaderboard to see your ranking!`,
+        {
+          position: "top-center",
+          autoClose: 5000
+        }
+      )
+
+    } catch (error) {
+      toast.error('Challenge completed but failed to submit to leaderboard', {
+        position: "top-center",
+        autoClose: 3000
+      })
+    }
+
+    setTimeout(() => {
+      navigate('/leaderboard')
+    }, 4000)
+  }
+
   const handleGameComplete = () => {
     const finalScore = sessionScore
     const targetReached = correctAnswers >= (gameData?.targetScore || 0)
@@ -215,7 +335,7 @@ const handleSubmitAnswer = () => {
   
 return (
     <div className="max-w-4xl mx-auto">
-      {/* Confetti for game completion */}
+      {/* Confetti for game/challenge completion */}
       {showConfetti && (
         <Confetti
           width={window.innerWidth}
@@ -232,7 +352,15 @@ return (
             <Avatar character="wizard" emotion={avatarEmotion} animated />
             <div>
               <h2 className="text-xl font-display font-bold text-gray-800">
-                {isGame ? (
+                {challengeMode ? (
+                  <div className="flex items-center space-x-2">
+                    <ApperIcon name="Trophy" className="w-6 h-6 text-yellow-600" />
+                    <span>{gameData?.name || 'Timed Challenge'}</span>
+                    <span className="text-sm bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
+                      Challenge Mode
+                    </span>
+                  </div>
+                ) : isGame ? (
                   <div className="flex items-center space-x-2">
                     <ApperIcon name={gameData?.icon || 'Gamepad2'} className="w-6 h-6" />
                     <span>{gameData?.title || 'Mini Game'}</span>
@@ -242,7 +370,17 @@ return (
                 )}
               </h2>
               <p className="text-gray-600">
-                {isGame ? (
+                {challengeMode ? (
+                  <div className="flex items-center space-x-4">
+                    <span>Correct: {correctAnswers}/{problems.length}</span>
+                    <span>Accuracy: {problems.length > 0 ? Math.round((correctAnswers / Math.max(currentIndex, 1)) * 100) : 0}%</span>
+                    {timeRemaining !== null && (
+                      <span className={`font-mono ${timeRemaining <= 30 ? 'text-red-600' : timeRemaining <= 60 ? 'text-yellow-600' : ''}`}>
+                        ⏱️ {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
+                      </span>
+                    )}
+                  </div>
+                ) : isGame ? (
                   <div className="flex items-center space-x-4">
                     <span>Correct: {correctAnswers}/{gameData?.targetScore || 0}</span>
                     {timeRemaining !== null && (
@@ -261,32 +399,59 @@ return (
           <div className="flex items-center space-x-4">
             <div className="text-right">
               <p className="text-sm text-gray-600">
-                {isGame ? 'Game Score' : 'Session Score'}
+                {challengeMode ? 'Challenge Score' : isGame ? 'Game Score' : 'Session Score'}
               </p>
               <p className="text-2xl font-bold text-primary-600">{sessionScore}</p>
             </div>
             <Button variant="ghost" onClick={handleQuit}>
               <ApperIcon name="X" className="w-4 h-4 mr-2" />
-              {isGame ? 'End Game' : 'Quit'}
+              {challengeMode ? 'End Challenge' : isGame ? 'End Game' : 'Quit'}
             </Button>
           </div>
         </div>
         
         <ProgressBar value={progress} className="mb-2" />
         <div className="flex justify-between text-sm text-gray-600">
-          <span>{isGame ? 'Time Progress' : 'Progress'}</span>
+          <span>
+            {challengeMode ? 'Time Progress' : isGame ? 'Time Progress' : 'Progress'}
+          </span>
           <span>{Math.round(progress)}%</span>
         </div>
+        
+        {/* Challenge performance indicators */}
+        {challengeMode && (
+          <div className="mt-4 flex justify-between text-xs text-gray-500">
+            <span>Avg Response: {responseTimes.length > 0 ? (responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length).toFixed(1) : 0}s</span>
+            <span>Questions Left: {problems.length - currentIndex - 1}</span>
+          </div>
+        )}
       </div>
       
-{/* Problem/Game Question */}
-      {isGame ? (
+{/* Problem/Game/Challenge Question */}
+      {isGame || challengeMode ? (
         <motion.div
           key={currentIndex}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-magical p-8 mb-8"
         >
+          {/* Challenge mode enhanced display */}
+          {challengeMode && (
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <ApperIcon name="Zap" className="w-5 h-5 text-yellow-600" />
+                  <span className="font-bold text-yellow-800">Challenge Question {currentIndex + 1}</span>
+                </div>
+                {questionStartTime && (
+                  <div className="text-sm text-yellow-700">
+                    Response time: {((new Date() - questionStartTime) / 1000).toFixed(1)}s
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
           {/* Game-specific rendering */}
           {gameData?.type === 'speed-math' && (
             <div className="text-center">
@@ -360,6 +525,17 @@ return (
             </div>
           )}
           
+          {/* Standard challenge questions use ProblemCard */}
+          {(!gameData?.type || gameData?.type.includes('challenge')) && (
+            <ProblemCard
+              problem={currentProblem}
+              selectedAnswer={selectedAnswer}
+              onAnswerSelect={handleAnswerSelect}
+              showResult={showResult}
+              enhanced={challengeMode}
+            />
+          )}
+          
           {/* Show result feedback */}
           {showResult && (
             <motion.div
@@ -374,8 +550,19 @@ return (
                 className="w-8 h-8 mx-auto mb-2" 
               />
               <p className="font-bold">
-                {isCorrect ? 'Correct!' : `Incorrect. The answer was: ${currentProblem.answer}`}
+                {isCorrect ? (
+                  challengeMode && responseTimes.length > 0 && responseTimes[responseTimes.length - 1] < (subject === 'math' ? 10 : 15) ? 
+                    `Lightning Fast! (+Speed Bonus)` : 
+                    'Correct!'
+                ) : (
+                  `Incorrect. The answer was: ${currentProblem.correctAnswer}`
+                )}
               </p>
+              {challengeMode && responseTimes.length > 0 && (
+                <p className="text-sm mt-2">
+                  Response time: {responseTimes[responseTimes.length - 1].toFixed(1)}s
+                </p>
+              )}
             </motion.div>
           )}
         </motion.div>
@@ -389,7 +576,7 @@ return (
         />
       )}
       
-{/* Action Buttons */}
+      {/* Action Buttons */}
       {!showResult && (
         <div className="text-center">
           <Button
@@ -399,19 +586,20 @@ return (
             disabled={!selectedAnswer || gameComplete}
             className="min-w-48"
           >
-            {isGame ? 'Submit' : 'Submit Answer'}
+            {challengeMode ? 'Submit (Challenge)' : isGame ? 'Submit' : 'Submit Answer'}
             <ApperIcon name="Send" className="w-5 h-5 ml-2" />
           </Button>
           
-          {isGame && gameStarted && (
+          {(isGame || challengeMode) && gameStarted && (
             <div className="mt-4 text-sm text-gray-600">
-              Press Enter to submit quickly!
+              Press Enter to submit quickly! 
+              {challengeMode && <span className="text-yellow-600 font-medium"> Challenge Mode Active</span>}
             </div>
           )}
         </div>
       )}
       
-      {showResult && !isGame && (
+      {showResult && !isGame && !challengeMode && (
         <div className="text-center">
           <Button
             variant="primary"
@@ -425,7 +613,7 @@ return (
         </div>
       )}
       
-      {showResult && isGame && !gameComplete && (
+      {showResult && (isGame || challengeMode) && !gameComplete && (
         <div className="text-center">
           <Button
             variant="primary"
@@ -433,12 +621,11 @@ return (
             onClick={handleNextProblem}
             className="min-w-48"
           >
-            Continue
+            {challengeMode ? 'Next Challenge' : 'Continue'}
             <ApperIcon name="ArrowRight" className="w-5 h-5 ml-2" />
           </Button>
         </div>
       )}
-      
       {/* Reward Modal */}
       <RewardModal
         isOpen={showReward}

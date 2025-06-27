@@ -6,6 +6,7 @@ import MathWorldPage from '@/components/pages/MathWorldPage'
 import ReadingKingdomPage from '@/components/pages/ReadingKingdomPage'
 import CharacterPage from '@/components/pages/CharacterPage'
 import ProgressPage from '@/components/pages/ProgressPage'
+import LeaderboardPage from '@/components/pages/LeaderboardPage'
 import ActivityPage from '@/components/pages/ActivityPage'
 import ParentDashboard from '@/components/pages/ParentDashboard'
 
@@ -21,6 +22,7 @@ function App() {
             <Route path="/reading" element={<ReadingKingdomPage />} />
             <Route path="/character" element={<CharacterPage />} />
             <Route path="/progress" element={<ProgressPage />} />
+            <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/parent-dashboard" element={<ParentDashboard />} />
             <Route path="/activity/:subject/:difficulty" element={<ActivityPage />} />
           </Routes>

@@ -8,30 +8,67 @@ export const getMathLevels = async () => {
   return [...mathLevels];
 }
 
-export const getMathProblems = async (difficulty) => {
+export const getMathProblems = async (difficulty, isChallenge = false, challengeType = null) => {
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 400))
   
   const problems = mathProblems.filter(p => p.difficulty === parseInt(difficulty))
   
-  // Shuffle and return a subset of problems
+  // Shuffle problems
   const shuffled = [...problems].sort(() => Math.random() - 0.5)
-  return shuffled.slice(0, 5) // Return 5 problems per session
+  
+  // Return different amounts based on challenge type
+  if (isChallenge) {
+    switch (challengeType) {
+      case 'speed-challenge':
+        return shuffled.slice(0, 20) // More problems for speed
+      case 'accuracy-challenge':
+        return shuffled.slice(0, 20)
+      case 'endurance-challenge':
+        return shuffled.slice(0, 40) // Most problems for endurance
+      default:
+        return shuffled.slice(0, 15)
+    }
+  }
+  
+  return shuffled.slice(0, 5) // Return 5 problems per regular session
 }
 
-export const submitMathAnswer = async (problemId, answer) => {
+export const getChallenges = async (difficulty) => {
+  const { getChallengeTypes } = await import('./leaderboardService')
+  return getChallengeTypes('math')
+}
+export const submitMathAnswer = async (problemId, answer, timingData = null) => {
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 200))
   
   const problem = mathProblems.find(p => p.id === problemId)
   if (!problem) throw new Error('Problem not found')
   
-const isCorrect = answer === problem.correctAnswer
+  const isCorrect = answer === problem.correctAnswer
+  let points = isCorrect ? problem.points : 0
+  
+  // Apply timing bonuses for challenges
+  if (timingData && timingData.isChallenge) {
+    if (isCorrect && timingData.responseTime < 10) { // Under 10 seconds
+      points = Math.floor(points * 1.5) // 50% bonus for speed
+    }
+  }
+  
   return {
     correct: isCorrect,
-    points: isCorrect ? problem.points : 0,
-    correctAnswer: problem.correctAnswer
+    points,
+    correctAnswer: problem.correctAnswer,
+    responseTime: timingData?.responseTime || 0
   }
+}
+
+export const submitChallenge = async (challengeData) => {
+  const { submitChallengeResult } = await import('./leaderboardService')
+  return submitChallengeResult({
+    ...challengeData,
+    subject: 'math'
+  })
 }
 
 // Mini-Game Integration
